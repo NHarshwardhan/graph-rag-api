@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+openai
+neo4j
+python-dotenv
+langchain 
+langchain-openai 
+langchain-core
+llama-index 
+llama-index-vector-stores-neo4jvector 
+llama-index-llms-openai 
+llama-index-embeddings-openai
