@@ -6,6 +6,7 @@ from llama_index.core import VectorStoreIndex, Document, Settings,PromptTemplate
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.neo4jvector import Neo4jVectorStore
+from fastapi.middleware.cors import CORSMiddleware
 
 from dotenv import load_dotenv
 import os
@@ -63,6 +64,17 @@ query_engine = index.as_query_engine( text_qa_template=qa_prompt,similarity_top_
 # -----------------------------------
 class QuestionRequest(BaseModel):
     question: str
+
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # -----------------------------------
 # API
