@@ -1,11 +1,13 @@
+
 from fastapi import FastAPI
 from pydantic import BaseModel
-from llama_index.core import VectorStoreIndex, Settings
-from llama_index.core.prompts import PromptTemplate
+
+from llama_index.core import VectorStoreIndex, Document, Settings,PromptTemplate
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.neo4jvector import Neo4jVectorStore
 from fastapi.middleware.cors import CORSMiddleware
+
 from dotenv import load_dotenv
 import os
 
@@ -16,7 +18,7 @@ load_dotenv()
 app = FastAPI()
 
 # -----------------------------------
-# LLM + EMBEDDING CONFIG
+# LLM + EMBEDDING CONFIG (LlamaIndex)
 # -----------------------------------
 Settings.llm = OpenAI(model="gpt-4.1-nano")
 Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
@@ -36,50 +38,32 @@ vector_store = Neo4jVectorStore(
     embedding_dimension=1536
 )
 
-# -----------------------------------
-# PROMPT TEMPLATE
-# -----------------------------------
 qa_prompt = PromptTemplate(
     """
-You are a strict enterprise HR assistant.
+RULES:
+1. Answer ONLY from provided context
+2. Never hallucinate
+3. If answer not found say:
+   "I don't know"
+4. Always format long answers using bullet points
+5. Keep answers clean and readable
+6. Use short concise points
 
-## RULES:
-- Use ONLY the provided context to answer questions
-- Never hallucinate or make up information
-- If the answer is not found in the context, respond with: "I don't know"
-
-## RESPONSE FORMAT:
-- Return answer in proper markdown
-- Each bullet point MUST be on its OWN separate line
-- NEVER put multiple bullets on the same line
-- Always add a newline character after each bullet point
-- Use **bold** for key terms and amounts
-
-## STRICT EXAMPLE — FOLLOW EXACTLY:
-- First point goes here
-- Second point goes here
-- Third point goes here
-
-## CONTEXT:
+Context:
 {context_str}
 
-## QUESTION:
+Question:
 {query_str}
-
-## ANSWER:
-Write each bullet point on a NEW separate line.
-If answer not found, say "I don't know".
+If not found, say "I don't know".
 """
-)
 
+)
 # -----------------------------------
-# INDEX + QUERY ENGINE
+# INDEX (CONNECTS TO EXISTING DATA)
 # -----------------------------------
 index = VectorStoreIndex.from_vector_store(vector_store)
-query_engine = index.as_query_engine(
-    text_qa_template=qa_prompt,
-    similarity_top_k=3
-)
+
+query_engine = index.as_query_engine( text_qa_template=qa_prompt,similarity_top_k=3)
 
 # -----------------------------------
 # REQUEST MODEL
@@ -87,9 +71,8 @@ query_engine = index.as_query_engine(
 class QuestionRequest(BaseModel):
     question: str
 
-# -----------------------------------
-# CORS
-# -----------------------------------
+
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -98,19 +81,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # -----------------------------------
 # API
 # -----------------------------------
 @app.post("/ask")
 async def ask(data: QuestionRequest):
+
     response = query_engine.query(data.question)
-
-    answer = response.response
-
-    if answer and " - " in answer:
-        answer = answer.replace(" - ", "\n- ")
 
     return {
         "question": data.question,
-        "answer": answer  
+        "answer": str(response)
     }
+
