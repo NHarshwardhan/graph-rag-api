@@ -1,13 +1,11 @@
-
 from fastapi import FastAPI
 from pydantic import BaseModel
-
-from llama_index.core import VectorStoreIndex, Document, Settings,PromptTemplate
+from llama_index.core import VectorStoreIndex, Settings
+from llama_index.core.prompts import PromptTemplate
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.neo4jvector import Neo4jVectorStore
 from fastapi.middleware.cors import CORSMiddleware
-
 from dotenv import load_dotenv
 import os
 
@@ -18,7 +16,7 @@ load_dotenv()
 app = FastAPI()
 
 # -----------------------------------
-# LLM + EMBEDDING CONFIG (LlamaIndex)
+# LLM + EMBEDDING CONFIG
 # -----------------------------------
 Settings.llm = OpenAI(model="gpt-4.1-nano")
 Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
@@ -38,6 +36,9 @@ vector_store = Neo4jVectorStore(
     embedding_dimension=1536
 )
 
+# -----------------------------------
+# PROMPT TEMPLATE
+# -----------------------------------
 qa_prompt = PromptTemplate(
     """
 You are a strict enterprise HR assistant.
@@ -59,28 +60,26 @@ You are a strict enterprise HR assistant.
 - Second point goes here
 - Third point goes here
 
-NOT like this:
-- First point - Second point - Third point  ← THIS IS WRONG
-
-Context:
+## CONTEXT:
 {context_str}
 
-Question:
+## QUESTION:
 {query_str}
 
 ## ANSWER:
-Write each bullet point on a separate line.
+Write each bullet point on a NEW separate line.
 If answer not found, say "I don't know".
-If not found, say "I don't know".
 """
-
 )
+
 # -----------------------------------
-# INDEX (CONNECTS TO EXISTING DATA)
+# INDEX + QUERY ENGINE
 # -----------------------------------
 index = VectorStoreIndex.from_vector_store(vector_store)
-
-query_engine = index.as_query_engine( text_qa_template=qa_prompt,similarity_top_k=3)
+query_engine = index.as_query_engine(
+    text_qa_template=qa_prompt,
+    similarity_top_k=3
+)
 
 # -----------------------------------
 # REQUEST MODEL
@@ -88,8 +87,9 @@ query_engine = index.as_query_engine( text_qa_template=qa_prompt,similarity_top_
 class QuestionRequest(BaseModel):
     question: str
 
-
-# Enable CORS
+# -----------------------------------
+# CORS
+# -----------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -98,17 +98,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # -----------------------------------
 # API
 # -----------------------------------
 @app.post("/ask")
 async def ask(data: QuestionRequest):
-
     response = query_engine.query(data.question)
+
+    answer = response.response
+
+    if answer and " - " in answer:
+        answer = answer.replace(" - ", "\n- ")
 
     return {
         "question": data.question,
-        "answer": str(response)
+        "answer": answer  
     }
-
