@@ -40,8 +40,14 @@ vector_store = Neo4jVectorStore(
 
 qa_prompt = PromptTemplate(
     """
-You are a strict assistant.
-Answer ONLY from context.
+RULES:
+1. Answer ONLY from provided context
+2. Never hallucinate
+3. If answer not found say:
+   "I don't know"
+4. Always format long answers using bullet points
+5. Keep answers clean and readable
+6. Use short concise points
 
 Context:
 {context_str}
