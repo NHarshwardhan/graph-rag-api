@@ -67,6 +67,10 @@ Context:
 
 Question:
 {query_str}
+
+## ANSWER:
+Write each bullet point on a separate line.
+If answer not found, say "I don't know".
 If not found, say "I don't know".
 """
 
