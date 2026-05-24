@@ -42,28 +42,27 @@ qa_prompt = PromptTemplate(
     """
 You are a strict enterprise HR assistant.
 
-IMPORTANT RULES:
+RULES:
+- Use ONLY provided context
+- Never hallucinate
+- If answer not found say "I don't know"
 
-1. Answer ONLY from provided context
-2. Never hallucinate
-3. If answer not found say:
-   "I don't know"
+IMPORTANT:
+Return answer in proper markdown format.
 
-4. ALWAYS format responses nicely:
-   - Use headings
-   - Use bullet points
-   - Each point MUST be on a new line
-   - Never return everything in one paragraph
+Every bullet point MUST start on a NEW LINE.
 
-5. Long answers MUST follow this exact format:
+Example format:
 
 ### Answer
 
 - Point 1
+
 - Point 2
+
 - Point 3
 
-6. Keep answers concise and readable
+Do NOT return inline bullets.
 
 Context:
 {context_str}
